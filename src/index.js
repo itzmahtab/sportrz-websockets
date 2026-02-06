@@ -3,6 +3,7 @@ import { matchesRouter } from './routes/matches.js';
 import http from 'http';
 import dotenv from 'dotenv';
 import { attachWebsocket } from './ws/server.js';
+import { securtiyMiddleware } from './arcjet.js';
 
 dotenv.config();
 
@@ -17,6 +18,7 @@ app.use(express.json());
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the Express server!' });
 });
+app.use(securtiyMiddleware);
 
 app.use('/matches', matchesRouter);
 
