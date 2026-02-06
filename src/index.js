@@ -1,21 +1,35 @@
 import express from 'express';
 import { matchesRouter } from './routes/matches.js';
+import http from 'http';
+import dotenv from 'dotenv';
+import { attachWebsocket } from './ws/server.js';
+
+dotenv.config();
+
+const PORT = process.env.PORT || 8000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 const app = express();
-const PORT = 8000;
+const server = http.createServer(app);
 
-// JSON middleware
 app.use(express.json());
 
-// Root GET route
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the Express server!' });
 });
 
-app.use('/matches',matchesRouter);
+app.use('/matches', matchesRouter);
 
+const { broadcastMatchCreated } = attachWebsocket(server);
+app.locals.broadcastMatchCreated = broadcastMatchCreated;
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
+// START THE HTTP SERVER (NOT EXPRESS)
+server.listen(PORT, HOST, () => {
+  const baseURL =
+    HOST === '0.0.0.0'
+      ? `http://localhost:${PORT}`
+      : `http://${HOST}:${PORT}`;
+
+  console.log(`Server is running at ${baseURL}`);
+  console.log(`WebSocket endpoint available at ws://localhost:${PORT}/ws`);
 });
