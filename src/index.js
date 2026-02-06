@@ -3,6 +3,7 @@ import { matchesRouter } from './routes/matches.js';
 import http from 'http';
 import dotenv from 'dotenv';
 import { attachWebsocket } from './ws/server.js';
+import { securityMiddleware } from './arcjet.js';
 
 dotenv.config();
 
@@ -13,6 +14,9 @@ const app = express();
 const server = http.createServer(app);
 
 app.use(express.json());
+
+// Security middleware should run before route handlers
+app.use(securityMiddleware);
 
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the Express server!' });

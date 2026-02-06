@@ -1,4 +1,5 @@
 import WebSocket, { WebSocketServer } from "ws";
+import { wsArcjet } from "../arcjet.js";
 
 function sendJson(socket, payload) {
     if (socket.readyState !== WebSocket.OPEN) return;
@@ -19,7 +20,23 @@ export function attachWebsocket(server) {
         maxPayload: 1024 * 1024,
     });
 
-    wss.on("connection", (socket) => {
+    wss.on("connection", async (socket,req) => {
+        if(wsArcjet){
+            try {
+                const result =  await wsArcjet.protect(req);
+                if(result.isDenied()) {
+                    const code = result.isRateLimited() ? 1013 : 1008;
+                    const reason = result.isRateLimited() ? 'Too many requests' : 'Forbidden - suspected bot activity';
+                    socket.close(code, reason);
+                    return;
+                }
+                
+            } catch (error) {
+                console.error('Arcjet WebSocket error:',error);
+                socket.close(1011, 'Internal server security error');
+                return;
+            }
+        }
         sendJson(socket, { message: "Welcome to the WebSocket server!" });
         socket.on("error", console.error);
     });
