@@ -3,7 +3,8 @@ import { matchesRouter } from './routes/matches.js';
 import http from 'http';
 import dotenv from 'dotenv';
 import { attachWebsocket } from './ws/server.js';
-import { securtiyMiddleware } from './arcjet.js';
+import { securityMiddleware } from './arcjet.js';
+import { commentaryRouter } from './routes/commentary.js';
 
 dotenv.config();
 
@@ -15,15 +16,19 @@ const server = http.createServer(app);
 
 app.use(express.json());
 
+// Security middleware should run before route handlers
+app.use(securityMiddleware);
+
 app.get('/', (req, res) => {
   res.json({ message: 'Welcome to the Express server!' });
 });
-app.use(securtiyMiddleware);
 
 app.use('/matches', matchesRouter);
+app.use('/matches/:id/commentary', commentaryRouter);
 
-const { broadcastMatchCreated } = attachWebsocket(server);
+const { broadcastMatchCreated, broadcastCommentary } = attachWebsocket(server);
 app.locals.broadcastMatchCreated = broadcastMatchCreated;
+app.locals.broadcastCommentary = broadcastCommentary;
 
 // START THE HTTP SERVER (NOT EXPRESS)
 server.listen(PORT, HOST, () => {
