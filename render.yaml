@@ -1,0 +1,16 @@
+services:
+  - type: web
+    name: sportrz-websockets
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: ARCJET_KEY
+        sync: false
+      - key: SENTRY_DSN
+        sync: false
+      - key: ARCJET_MODE
+        value: LIVE
