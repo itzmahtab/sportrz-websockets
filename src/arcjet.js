@@ -1,4 +1,4 @@
-import arcjet, { shield, detectBot, slidingWindow } from "@arcjet/node";
+﻿import arcjet, { shield, detectBot, slidingWindow } from "@arcjet/node";
 
 const arcjetKey = process.env.ARCJET_KEY;
 const arcjetMode = process.env.ARCJET_MODE === 'DRY_RUN' ? 'DRY_RUN' : 'LIVE';
@@ -25,6 +25,17 @@ export const httpArcjet = arcjetKey
       }),
     ],
   })
+      key: arcjetKey,
+      rules: [
+        shield({ mode: arcjetMode }),
+        detectBot({ mode: arcjetMode, allow: ['CATEGORY:SEARCH_ENGINE', 'CATEGORY:PREVIEW'] }),
+        slidingWindow({
+          mode: arcjetMode,
+          interval: '10s',
+          max: 50,
+        }),
+      ],
+    })
   : null;
 
 export const wsArcjet = arcjetKey
@@ -48,6 +59,17 @@ export const wsArcjet = arcjetKey
       }),
     ],
   })
+      key: arcjetKey,
+      rules: [
+        shield({ mode: arcjetMode }),
+        detectBot({ mode: arcjetMode, allow: ['CATEGORY:SEARCH_ENGINE', 'CATEGORY:PREVIEW'] }),
+        slidingWindow({
+          mode: arcjetMode,
+          interval: '2s',
+          max: 5,
+        }),
+      ],
+    })
   : null;
 
 // Single middleware to integrate Arcjet protection for HTTP requests
@@ -70,6 +92,8 @@ export async function securityMiddleware(req, res, next) {
       } else {
         return res.status(403).json({ error: 'Access denied' });
       }
+    if (result && typeof result.isDenied === 'function' && result.isDenied()) {
+      return res.status(429).json({ error: 'Too many requests' });
     }
 
     return next();
@@ -82,5 +106,9 @@ export async function securityMiddleware(req, res, next) {
       error: 'Internal server error (Security Layer)',
       details: error.message
     });
+  }
+}
+    console.error('Arcjet error:', error);
+    return res.status(503).json({ error: 'Internal server error' });
   }
 }
