@@ -1,5 +1,6 @@
 import WebSocket, { WebSocketServer } from 'ws';
 import { wsArcjet } from "../arcjet.js";
+import * as Sentry from "@sentry/node";
 
 const matchSubscribers = new Map();
 
@@ -63,7 +64,8 @@ function handleMessage(socket, data) {
 
     try {
         message = JSON.parse(data.toString());
-    } catch {
+    } catch (error) {
+        Sentry.captureException(error);
         sendJson(socket, { type: 'error', message: 'Invalid JSON' });
         return;
     }
@@ -98,6 +100,12 @@ export function attachWebsocket(server) {
         }
 
         if (wsArcjet) {
+            // Arcjet DetectBot requires a User-Agent header. 
+            // We provide a fallback if the client doesn't send one.
+            if (!req.headers['user-agent']) {
+                req.headers['user-agent'] = 'WebSocketClient/1.0';
+            }
+
             try {
                 const decision = await wsArcjet.protect(req);
 
@@ -111,6 +119,7 @@ export function attachWebsocket(server) {
                     return;
                 }
             } catch (e) {
+                Sentry.captureException(e);
                 console.error('WS upgrade protection error', e);
                 socket.write('HTTP/1.1 500 Internal Server Error\r\n\r\n');
                 socket.destroy();
@@ -143,7 +152,10 @@ export function attachWebsocket(server) {
             cleanupSubscriptions(socket);
         })
 
-        socket.on('error', console.error);
+        socket.on('error', (error) => {
+            Sentry.captureException(error);
+            console.error(error);
+        });
     });
 
     const interval = setInterval(() => {
